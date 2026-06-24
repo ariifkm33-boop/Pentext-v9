@@ -2,7 +2,7 @@ import sqlite3, json, os, threading
 from datetime import datetime, timedelta
 
 DB_PATH = '/data/database.sqlite'
-REQUIRED_REFS = 2
+REQUIRED_REFS = 0
 FREE_LINKS = 2
 MAX_LINKS_PER_HOUR = 5
 
