@@ -88,17 +88,16 @@ class Database:
             return True
         except: return False
     
-    def get_available_links(self, tid):
+def get_available_links(self, tid):
         u = self.get_user(tid)
         if not u: return 0
         if u.get('is_banned'): return 0
-        # FREE_LINKS = 2, referral bonus = refer_count // REQUIRED_REFS
         bonus = u.get('refer_count', 0) // REQUIRED_REFS
         total = FREE_LINKS + bonus
-        self.c.execute("SELECT COUNT(*) FROM victims WHERE telegram_id=?", (tid,))
-        used = self.c.fetchone()[0]
-        available = total - used
-        print(f"User {tid}: FREE={FREE_LINKS}, bonus={bonus}, total={total}, used={used}, available={available}", flush=True)
+        # total_links_created দিয়ে হিসাব করুন (victims COUNT না)
+        created = u.get('total_links_created', 0)
+        available = total - created
+        print(f"User {tid}: FREE={FREE_LINKS}, bonus={bonus}, total={total}, created={created}, available={available}", flush=True)
         return max(0, available)
     
     def create_victim(self, tid, code, cu, lu, au):
