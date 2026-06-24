@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 DB_PATH = '/data/database.sqlite'
 REQUIRED_REFS = 2
 FREE_LINKS = 2
-MAX_LINKS_PER_HOUR = 50
+MAX_LINKS_PER_HOUR = 5
 
 class Database:
     _instance = None
