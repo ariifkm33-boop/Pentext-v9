@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Location Permission</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0d1f14;
+      color: #d8f0e0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: #122a1c;
+      border: 1px solid #1e4a2e;
+      border-radius: 16px;
+      padding: 40px 36px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .icon { font-size: 56px; margin-bottom: 20px; }
+    h2 { font-size: 22px; font-weight: 700; margin-bottom: 10px; color: #ffffff; }
+    p { font-size: 14px; color: #7ab08a; line-height: 1.6; margin-bottom: 28px; }
+    button {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: #2e7d4f; color: #fff; margin-bottom: 12px; }
+    .btn-primary:hover { background: #256040; }
+    .btn-secondary { background: transparent; color: #2e7d4f; border: 1px solid #2e7d4f; }
+    .btn-secondary:hover { background: #2e7d4f22; }
+    #status { margin-top: 18px; font-size: 13px; min-height: 20px; }
+    .success { color: #4caf50; }
+    .error   { color: #f44336; }
+    #coords {
+      margin-top: 14px;
+      background: #0d1f14;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 13px;
+      color: #a0d0b0;
+      text-align: left;
+      display: none;
+      line-height: 1.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">📍</div>
+    <h2>Location Access</h2>
+    <p>This page wants to know your current location. Your data stays on this page only.</p>
+    <button class="btn-primary" onclick="requestLocation()">Allow Location</button>
+    <button class="btn-secondary" onclick="denyLocation()">Deny</button>
+    <div id="status"></div>
+    <div id="coords"></div>
+  </div>
+
+  <script>
+    function requestLocation() {
+      const status = document.getElementById('status');
+      const coords = document.getElementById('coords');
+      if (!navigator.geolocation) {
+        status.textContent = '❌ Geolocation not supported.';
+        status.className = 'error';
+        return;
+      }
+      status.textContent = '⏳ Fetching location...';
+      status.className = '';
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          status.textContent = '✅ Location access granted!';
+          status.className = 'success';
+          coords.style.display = 'block';
+          coords.innerHTML = `
+            <strong>Latitude:</strong> ${pos.coords.latitude.toFixed(6)}<br>
+            <strong>Longitude:</strong> ${pos.coords.longitude.toFixed(6)}<br>
+            <strong>Accuracy:</strong> ±${Math.round(pos.coords.accuracy)} meters
+          `;
+        },
+        (err) => {
+          status.textContent = '❌ Location denied: ' + err.message;
+          status.className = 'error';
+        }
+      );
+    }
+
+    function denyLocation() {
+      const status = document.getElementById('status');
+      status.textContent = '🚫 Location access denied by user.';
+      status.className = 'error';
+    }
+  </script>
+</body>
+</html>
